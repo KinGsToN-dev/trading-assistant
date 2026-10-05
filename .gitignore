@@ -1,0 +1,46 @@
+# ==================
+# Python
+# ==================
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.venv/
+venv/
+env/
+
+# ==================
+# Django
+# ==================
+*.log
+db.sqlite3
+media/
+staticfiles/
+.env
+.env.local
+.access_token
+.refresh_token
+
+# ==================
+# Pytest
+# ==================
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# ==================
+# IDE
+# ==================
+.idea/
+.vscode/
+!.vscode/settings.json
+!.vscode/launch.json
+*.swp
+
+# ==================
+# OS
+# ==================
+.DS_Store
+Thumbs.db
+desktop.ini
