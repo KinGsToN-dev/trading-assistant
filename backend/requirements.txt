@@ -22,7 +22,6 @@ iniconfig==2.3.0
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
 mccabe==0.7.0
-metatrader5==5.0.6231
 mypy_extensions==1.1.0
 numpy==2.5.3
 packaging==26.3

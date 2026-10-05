@@ -97,7 +97,6 @@ class Trade(models.Model):
         return f"{self.symbol} {self.side} @ {self.entry_price}"
 
     def calculate_pnl(self):
-        """Р Р°СЃСЃС‡РёС‚С‹РІР°РµС‚ PnL, РµСЃР»Рё СЃРґРµР»РєР° Р·Р°РєСЂС‹С‚Р°."""
         if self.exit_price is None or self.status != 'closed':
             return None
         diff = self.exit_price - self.entry_price
@@ -106,7 +105,8 @@ class Trade(models.Model):
         gross = diff * self.quantity
         return gross - self.commission
 
-def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs):
+        # Автоматический расчёт PnL при закрытии — только если PnL не задан явно
         if (
             self.status == 'closed'
             and self.exit_price is not None
