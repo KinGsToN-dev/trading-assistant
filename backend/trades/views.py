@@ -7,6 +7,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .models import Trade
 from .serializers import TradeSerializer, TradeCreateSerializer, TradeStatsSerializer, MT5TradeImportSerializer
 from .permissions import HasMT5ApiKey
+from notifications.services.telegram import notify_new_trade
 
 
 class TradeViewSet(viewsets.ModelViewSet):
@@ -20,7 +21,7 @@ class TradeViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = Trade.objects.filter(user=self.request.user)
 
-        # Р¤РёР»СЊС‚СЂ РїРѕ РґРёР°РїР°Р·РѕРЅСѓ РґР°С‚
+        # Р В¤Р С‘Р В»РЎРЉРЎвЂљРЎР‚ Р С—Р С• Р Т‘Р С‘Р В°Р С—Р В°Р В·Р С•Р Р…РЎС“ Р Т‘Р В°РЎвЂљ
         date_from = self.request.query_params.get('from')
         date_to = self.request.query_params.get('to')
         if date_from:
@@ -40,7 +41,7 @@ class TradeViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def stats(self, request):
-        """РЎС‚Р°С‚РёСЃС‚РёРєР° РїРѕ СЃРґРµР»РєР°Рј РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ."""
+        """Р РЋРЎвЂљР В°РЎвЂљР С‘РЎРѓРЎвЂљР С‘Р С”Р В° Р С—Р С• РЎРѓР Т‘Р ВµР В»Р С”Р В°Р С Р С—Р С•Р В»РЎРЉР В·Р С•Р Р†Р В°РЎвЂљР ВµР В»РЎРЏ."""
         qs = self.get_queryset()
         closed = qs.filter(status='closed', pnl__isnull=False)
 
@@ -88,13 +89,13 @@ class TradeViewSet(viewsets.ModelViewSet):
     def import_mt5(self, request):
         trades_data = request.data.get('trades', [])
         if not isinstance(trades_data, list):
-            return Response({'detail': 'Поле "trades" должно быть массивом'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'РџРѕР»Рµ "trades" РґРѕР»Р¶РЅРѕ Р±С‹С‚СЊ РјР°СЃСЃРёРІРѕРј'}, status=status.HTTP_400_BAD_REQUEST)
 
         from django.contrib.auth import get_user_model
         User = get_user_model()
         owner = User.objects.filter(is_superuser=True).order_by('id').first()
         if not owner:
-            return Response({'detail': 'Нет суперюзера'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'detail': 'РќРµС‚ СЃСѓРїРµСЂСЋР·РµСЂР°'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         created = 0
         updated = 0
@@ -127,8 +128,20 @@ class TradeViewSet(viewsets.ModelViewSet):
                 existing.save()
                 updated += 1
             else:
-                Trade.objects.create(user=owner, source='mt5', external_id=external_id, **defaults)
+                trade = Trade.objects.create(
+                user=owner, source='mt5', external_id=external_id, **defaults
+                )
                 created += 1
+            # Уведомление в Telegram
+                # Уведомление в Telegram
+                try:
+                    if owner.notification_settings.notify_new_trade:
+                        notify_new_trade(owner, trade)
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).exception(
+                        f'Failed to send notification for trade {trade.id}: {e}'
+                    )
 
         return Response({
             'created': created, 'updated': updated, 'skipped': 0,
