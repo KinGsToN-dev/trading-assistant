@@ -18,6 +18,9 @@ AI-ассистент трейдера: журнал сделок, импорт 
 - 📈 **Рыночные данные** — цены крипты (CoinGecko) и форекса (MetaTrader 5), кэш в PostgreSQL
 - 🕯️ **Свечи OHLC** — `/api/market/{symbol}/candles/?days=7` для графиков
 - ⏰ **Фоновый scheduler** — обновление цен каждые 60 секунд (без Redis)
+- 🔔 **Telegram-уведомления** — о новых сделках, TP/SL, утренний дайджест
+- 📊 **Лог уведомлений** — история всех отправленных сообщений
+- ⚙️ **Настройки per-user** — какие уведомления включены, час дайджеста
 
 ## 🏗️ Стек
 
@@ -102,6 +105,11 @@ POST	/api/trades/import/mt5/	Импорт из MT5 (X-API-Key)
 | GET | `/api/market/{symbol}/` | Текущая цена символа |
 | GET | `/api/market/{symbol}/candles/?days=7` | Свечи OHLC для графиков |
 | POST | `/api/market/refresh/` | Ручное обновление цен |
+| GET/PATCH | `/api/notifications/settings/` | Настройки уведомлений |
+| POST | `/api/notifications/telegram/link/` | Привязать Telegram |
+| POST | `/api/notifications/telegram/unlink/` | Отвязать Telegram |
+| POST | `/api/notifications/test/` | Тестовое уведомление |
+| GET | `/api/notifications/history/` | История уведомлений |
 
 📁 Структура
 text

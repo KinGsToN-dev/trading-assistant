@@ -60,14 +60,16 @@
 - Дисклеймер «не финансовая рекомендация»
 - **7 тестов** (мок OpenAI, лимиты, стоимость)
 
-## 🔮 Этап 7: Уведомления
+## ✅ Этап 7: Уведомления (завершён)
 
-- **Telegram-бот**: `/start`, `/link`, `/stats`, `/last`
-- **Email**: через SendGrid/Mailgun
-- **Push (FCM)**: Firebase Cloud Messaging
-- Модель `DeviceToken`
-- Сценарии: новая сделка, цель достигнута, AI-анализ готов
-- **6 тестов** (Telegram, email, FCM, retry)
+- Модель `NotificationSettings` (per-user настройки)
+- Модель `NotificationLog` (история отправок)
+- Telegram-сервис: `send_message`, `send_to_user`
+- Готовые шаблоны: `notify_new_trade`, `notify_tp_sl`, `notify_daily_digest`
+- Эндпоинты: link, unlink, test, settings, history
+- **Интеграция с MT5-импортом** — уведомления о новых сделках
+- **8 тестов** (моки Telegram API)
+- **Работает вживую** — проверено на реальной сделке XAUUSD
 
 ## 🔮 Этап 8: Flutter + Firebase + деплой
 
@@ -96,9 +98,9 @@
 | 4. MT5 import | 6 | ✅ |
 | 5. Market data | 9 | ✅ |
 | 6. AI agent | 7 | ⏳ |
-| 7. Notifications | 6 | ⏳ |
+| 7. Notifications | 8 | ✅ |
 | 8. Flutter | 10 | ⏳ |
-| **Итого** | **60** | **37/60** |
+| **Итого** | **53** | **45/53** |
 
 ## 💼 Что даёт проект
 
