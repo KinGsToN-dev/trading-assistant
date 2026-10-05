@@ -1,5 +1,7 @@
 # 📈 Trading Assistant — Full-Stack
 
+![Backend Tests](https://github.com/KinGsToN-dev/trading-assistant/actions/workflows/tests.yml/badge.svg)
+
 AI-ассистент трейдера: журнал сделок, импорт из MetaTrader 5, котировки в реальном времени, AI-анализ графиков и уведомления.
 
 ## ✨ Что уже реализовано
