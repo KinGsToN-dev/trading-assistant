@@ -15,6 +15,9 @@ AI-ассистент трейдера: журнал сделок, импорт 
 - 🤖 **Импорт из MetaTrader 5** — через API-токен (`X-API-Key`), идемпотентность по `external_id`
 - 🖥️ **MT5-коллектор** — локальный скрипт читает историю сделок и пушит в Django
 - 🎨 **Django Admin** — с фильтрами, date-hierarchy, поиском
+- 📈 **Рыночные данные** — цены крипты (CoinGecko) и форекса (MetaTrader 5), кэш в PostgreSQL
+- 🕯️ **Свечи OHLC** — `/api/market/{symbol}/candles/?days=7` для графиков
+- ⏰ **Фоновый scheduler** — обновление цен каждые 60 секунд (без Redis)
 
 ## 🏗️ Стек
 
@@ -24,8 +27,10 @@ AI-ассистент трейдера: журнал сделок, импорт 
 | БД | PostgreSQL 18 |
 | Auth | JWT (access + refresh), bcrypt |
 | MT5 | MetaTrader5 (Python), `history_deals_get` |
-| Тесты | pytest, pytest-django, 28 тестов |
+| Рыночные данные | CoinGecko API (крипта), MT5 (форекс) |
+| Тесты | pytest, pytest-django, **37 тестов** |
 | API docs | drf-spectacular (Swagger UI) |
+| CI/CD | GitHub Actions |
 
 ## 🚀 Быстрый старт
 
@@ -74,7 +79,10 @@ Admin: http://127.0.0.1:8000/admin/
 powershell
 cd backend
 python -m pytest -v
-28 тестов: 9 auth + 13 trades + 6 mt5-import.
+37 тестов: 9 auth + 13 trades + 6 mt5-import + 9 market.
+
+
+
 
 📊 API
 Метод	Путь	Описание
@@ -90,6 +98,11 @@ PUT/PATCH	/api/trades/{id}/	Обновить
 DELETE	/api/trades/{id}/	Удалить
 GET	/api/trades/stats/	Статистика (Win Rate, PnL)
 POST	/api/trades/import/mt5/	Импорт из MT5 (X-API-Key)
+| GET | `/api/market/watchlist/` | Избранные символы с ценами |
+| GET | `/api/market/{symbol}/` | Текущая цена символа |
+| GET | `/api/market/{symbol}/candles/?days=7` | Свечи OHLC для графиков |
+| POST | `/api/market/refresh/` | Ручное обновление цен |
+
 📁 Структура
 text
 trading_assistant/

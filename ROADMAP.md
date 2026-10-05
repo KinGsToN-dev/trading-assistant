@@ -36,18 +36,19 @@
 - **6 тестов** (авторизация, идемпотентность, валидация)
 - **Работает вживую** на FundedNext-аккаунте
 
-## 🚧 Этап 5: Рыночные данные (следующий)
+## ✅ Этап 5: Рыночные данные (завершён)
 
-**Backend:**
-- Модель `PriceSnapshot` для кэша цен
-- Интеграция с CoinGecko (крипта) — без API-ключа
-- Интеграция с MT5 (форекс) — через локальный мост
+- Модель `PriceSnapshot` — кэш цен
+- Модель `Candle` — свечи OHLC
+- Сервис **CoinGecko** — крипта (BTC, ETH, SOL, BNB, XRP, DOGE), без API-ключа
+- Сервис **MT5** — форекс (XAUUSD, EURUSD, GBPUSD, USDJPY), если доступен локально
 - Эндпоинты:
+  - `GET /api/market/watchlist/` — избранные символы с ценами
   - `GET /api/market/{symbol}/` — текущая цена
-  - `GET /api/market/{symbol}/candles/?tf=1h&limit=100` — свечи OHLC
-  - `WS /ws/market/{symbol}/` — WebSocket-стрим
-- Периодическое обновление через `threading` или Celery (без Redis)
-- **8 тестов** (моки API, кэш, fallback)
+  - `GET /api/market/{symbol}/candles/?days=7` — свечи OHLC
+  - `POST /api/market/refresh/` — ручное обновление
+- **Фоновый scheduler** через `threading.Timer` (обновление каждые 60 сек, без Redis/Celery)
+- **9 тестов** (моки CoinGecko, кэш, свечи, fallback)
 
 ## 🔮 Этап 6: AI-агент (анализ скриншотов)
 
@@ -93,11 +94,11 @@
 | 1-2. Auth | 9 | ✅ |
 | 3. Trades | 13 | ✅ |
 | 4. MT5 import | 6 | ✅ |
-| 5. Market data | 8 | ⏳ |
+| 5. Market data | 9 | ✅ |
 | 6. AI agent | 7 | ⏳ |
 | 7. Notifications | 6 | ⏳ |
 | 8. Flutter | 10 | ⏳ |
-| **Итого** | **59** | **28/59** |
+| **Итого** | **60** | **37/60** |
 
 ## 💼 Что даёт проект
 
@@ -106,3 +107,5 @@
 - **DevOps**: CI/CD + деплой + Firebase Hosting
 - **AI**: OpenAI Vision + промпт-инжиниринг
 - **Практическая польза**: реальный трейдинг-журнал, работает вживую
+
+
