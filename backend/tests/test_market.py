@@ -69,7 +69,7 @@ def test_candles_from_db(api_client):
 
 
 def test_candles_fetch_from_api(api_client):
-    """Если свечей нет - идёт запрос к CoinGecko."""
+    """Если свечей нет — идёт запрос к Biquote."""
     from datetime import datetime, timezone, timedelta
     now = datetime.now(timezone.utc)
     fake_candles = [
@@ -81,8 +81,10 @@ def test_candles_fetch_from_api(api_client):
         }
         for i in range(12)
     ]
-    with patch('market_data.services.coingecko.fetch_candles', return_value=fake_candles):
-        r = api_client.get(reverse('market-candles', args=['BTCUSDT']) + '?days=7')
+    # Патчим Biquote — основной источник в price_service
+    with patch('market_data.services.biquote.fetch_candles', return_value=fake_candles):
+        with patch('market_data.services.binance.fetch_candles', return_value=[]):
+            r = api_client.get(reverse('market-candles', args=['BTCUSDT']) + '?interval=1h&limit=12')
     assert r.status_code == 200
     assert len(r.data) == 12
 
