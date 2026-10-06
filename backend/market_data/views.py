@@ -11,13 +11,13 @@ from .services import price_service
 logger = logging.getLogger(__name__)
 
 
-# Символы, которые обновляются автоматически
+# РЎРёРјРІРѕР»С‹, РєРѕС‚РѕСЂС‹Рµ РѕР±РЅРѕРІР»СЏСЋС‚СЃСЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё
 CRYPTO_SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'DOGEUSDT']
 FOREX_SYMBOLS = ['XAUUSD', 'EURUSD', 'GBPUSD', 'USDJPY']
 
 
 def refresh_prices(symbols=None):
-    """Обновляет цены в БД через price_service (Biquote → Binance → MT5)."""
+    """РћР±РЅРѕРІР»СЏРµС‚ С†РµРЅС‹ РІ Р‘Р” С‡РµСЂРµР· price_service (Biquote в†’ Binance в†’ MT5)."""
     crypto = symbols or CRYPTO_SYMBOLS
     forex = FOREX_SYMBOLS
 
@@ -42,7 +42,7 @@ def refresh_prices(symbols=None):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def watchlist(request):
-    """Список избранных символов с ценами."""
+    """РЎРїРёСЃРѕРє РёР·Р±СЂР°РЅРЅС‹С… СЃРёРјРІРѕР»РѕРІ СЃ С†РµРЅР°РјРё."""
     symbols = CRYPTO_SYMBOLS + FOREX_SYMBOLS
     existing = set(PriceSnapshot.objects.filter(symbol__in=symbols).values_list('symbol', flat=True))
     missing = [s for s in symbols if s not in existing]
@@ -56,7 +56,7 @@ def watchlist(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def price_detail(request, symbol):
-    """Текущая цена символа."""
+    """РўРµРєСѓС‰Р°СЏ С†РµРЅР° СЃРёРјРІРѕР»Р°."""
     snapshot = PriceSnapshot.objects.filter(symbol=symbol.upper()).first()
     if not snapshot:
         refresh_prices()
@@ -64,7 +64,7 @@ def price_detail(request, symbol):
 
     if not snapshot:
         return Response(
-            {'detail': f'Символ {symbol} не найден'},
+            {'detail': f'РЎРёРјРІРѕР» {symbol} РЅРµ РЅР°Р№РґРµРЅ'},
             status=status.HTTP_404_NOT_FOUND,
         )
     return Response(PriceSnapshotSerializer(snapshot).data)
@@ -74,7 +74,7 @@ def price_detail(request, symbol):
 @permission_classes([AllowAny])
 def candles(request, symbol):
     """
-    Свечи для графика.
+    РЎРІРµС‡Рё РґР»СЏ РіСЂР°С„РёРєР°.
     ?interval=1h|4h|1d|5m|15m|30m
     ?limit=500
     """
@@ -82,17 +82,17 @@ def candles(request, symbol):
     interval = request.query_params.get('interval', '1h')
     limit = int(request.query_params.get('limit', 500))
 
-    # Проверяем допустимые интервалы
+    # РџСЂРѕРІРµСЂСЏРµРј РґРѕРїСѓСЃС‚РёРјС‹Рµ РёРЅС‚РµСЂРІР°Р»С‹
     if interval not in ('1m', '5m', '15m', '30m', '1h', '4h', '1d'):
         interval = '1h'
 
-    # Пробуем из БД
+    # РџСЂРѕР±СѓРµРј РёР· Р‘Р”
     qs = Candle.objects.filter(
         symbol=symbol, timeframe=interval
     ).order_by('timestamp')[:limit]
 
     if qs.count() < 10:
-        # Забираем из price_service
+        # Р—Р°Р±РёСЂР°РµРј РёР· price_service
         data = price_service.fetch_candles(symbol, interval=interval, limit=limit)
         if data:
             for c in data:
@@ -114,7 +114,7 @@ def candles(request, symbol):
 
     if not qs:
         return Response(
-            {'detail': f'Нет свечей для {symbol}'},
+            {'detail': f'РќРµС‚ СЃРІРµС‡РµР№ РґР»СЏ {symbol}'},
             status=status.HTTP_404_NOT_FOUND,
         )
 
@@ -124,6 +124,6 @@ def candles(request, symbol):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def manual_refresh(request):
-    """Ручное обновление цен."""
+    """Р СѓС‡РЅРѕРµ РѕР±РЅРѕРІР»РµРЅРёРµ С†РµРЅ."""
     count = refresh_prices()
     return Response({'updated': count})
