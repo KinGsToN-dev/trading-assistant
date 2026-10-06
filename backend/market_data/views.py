@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from .models import PriceSnapshot, Candle
 from .serializers import PriceSnapshotSerializer, CandleSerializer
-from .services import coingecko, mt5_prices
+from .services import binance as coingecko, mt5_prices
 
 logger = logging.getLogger(__name__)
 
