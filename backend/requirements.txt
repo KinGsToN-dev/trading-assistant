@@ -52,3 +52,6 @@ typing_extensions==4.16.0
 tzdata==2026.5
 uritemplate==4.2.0
 urllib3==2.8.0
+gunicorn==22.0.0
+dj-database-url==2.2.0
+whitenoise==6.7.0

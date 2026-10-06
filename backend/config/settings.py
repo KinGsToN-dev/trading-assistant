@@ -1,7 +1,7 @@
 from pathlib import Path
 from datetime import timedelta
 from decouple import config, Csv
-
+import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY')
@@ -15,6 +15,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'whitenoise.runserver_nostatic',
 
     # Third-party
     'rest_framework',
@@ -35,6 +36,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -63,14 +65,11 @@ TEMPLATES = [{
 WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
-    }
+    'default': dj_database_url.config(
+        default=f"postgresql://{config('DB_USER')}:{config('DB_PASSWORD')}@{config('DB_HOST')}:{config('DB_PORT')}/{config('DB_NAME')}",
+        conn_max_age=600,
+        ssl_require=True,
+    )
 }
 
 AUTH_USER_MODEL = 'users.User'
@@ -123,8 +122,11 @@ SPECTACULAR_SETTINGS = {
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'http://localhost:8080',
+    'http://localhost:52952',
+    'http://localhost:54321',
     'http://127.0.0.1:8000',
 ]
+CORS_ALLOW_ALL_ORIGINS = True 
 
 # Р В РІР‚С”Р В РЎвЂўР В РЎвЂ“Р В РЎвЂР РЋР вЂљР В РЎвЂўР В Р вЂ Р В Р’В°Р В Р вЂ¦Р В РЎвЂР В Р’Вµ
 LOGGING = {
@@ -141,3 +143,7 @@ MT5_API_TOKEN = config('MT5_API_TOKEN', default='change-me-in-env')
 # Telegram
 TELEGRAM_BOT_TOKEN = config('TELEGRAM_BOT_TOKEN', default='')
 TELEGRAM_CHAT_ID = config('TELEGRAM_CHAT_ID', default='')
+
+
+# Static files (production)
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
