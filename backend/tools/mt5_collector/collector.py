@@ -22,43 +22,96 @@ def connect_mt5():
     print(f"✅ Подключено к MT5. Аккаунт: {info.login} @ {info.server}, баланс: {info.balance} {info.currency}")
 
 
-def fetch_closed_trades(days_back=7):
+def fetch_trades(days_back=7):
+    """
+    Возвращает список сделок:
+    - закрытые (entry=0, exit=1) → status='closed'
+    - открытые (только entry=0 без exit) → status='open'
+    """
     date_from = datetime.now(timezone.utc) - timedelta(days=days_back)
     date_to = datetime.now(timezone.utc) + timedelta(days=1)
+
     deals = mt5.history_deals_get(date_from, date_to)
     if deals is None:
         print(f"❌ history_deals_get failed: {mt5.last_error()}")
         return []
+
+    # Группируем по position_id
     positions = {}
     for d in deals:
         if d.position_id == 0:
             continue
         positions.setdefault(d.position_id, []).append(d)
+
+    # Также берём ТЕКУЩИЕ открытые позиции
+    open_positions = mt5.positions_get()
+    if open_positions:
+        for p in open_positions:
+            pid = p.ticket
+            if pid not in positions:
+                # Синтетический "deal" для открытой позиции
+                positions[pid] = [type('D', (), {
+                    'position_id': pid,
+                    'symbol': p.symbol,
+                    'type': 0 if p.type == 0 else 1,
+                    'entry': 0,
+                    'price': p.price_open,
+                    'volume': p.volume,
+                    'profit': p.profit,
+                    'commission': 0,
+                    'time': int(p.time),
+                })()]
+
     trades = []
     for pid, deals_list in positions.items():
-        deals_list.sort(key=lambda x: x.time)
+        deals_list.sort(key=lambda x: getattr(x, 'time', 0))
         entry_deal = deals_list[0]
-        exit_deals = [d for d in deals_list if d.entry == 1]
-        if not exit_deals:
-            continue
-        exit_deal = exit_deals[-1]
-        trades.append({
-            'external_id': f"mt5-{pid}",
-            'symbol': entry_deal.symbol,
-            'side': 'buy' if entry_deal.type == 0 else 'sell',
-            'status': 'closed',
-            'entry_price': str(entry_deal.price),
-            'exit_price': str(exit_deal.price),
-            'quantity': str(entry_deal.volume),
-            'pnl': str(sum(d.profit for d in deals_list)),
-            'commission': str(sum(d.commission for d in deals_list)),
-            'opened_at': datetime.fromtimestamp(entry_deal.time, tz=timezone.utc).isoformat(),
-            'closed_at': datetime.fromtimestamp(exit_deal.time, tz=timezone.utc).isoformat(),
-            'strategy': '',
-            'notes': f"MT5 deal #{pid}",
-        })
-    return trades
+        exit_deals = [d for d in deals_list if getattr(d, 'entry', 0) == 1]
 
+        symbol = entry_deal.symbol
+        side = 'buy' if entry_deal.type == 0 else 'sell'
+        entry_price = entry_deal.price
+        quantity = entry_deal.volume
+        pnl = sum(getattr(d, 'profit', 0) for d in deals_list)
+        commission = sum(getattr(d, 'commission', 0) for d in deals_list)
+
+        if exit_deals:
+            # Закрытая
+            exit_deal = exit_deals[-1]
+            trades.append({
+                'external_id': f"mt5-{pid}",
+                'symbol': symbol,
+                'side': side,
+                'status': 'closed',
+                'entry_price': str(entry_price),
+                'exit_price': str(exit_deal.price),
+                'quantity': str(quantity),
+                'pnl': str(pnl),
+                'commission': str(commission),
+                'opened_at': datetime.fromtimestamp(entry_deal.time, tz=timezone.utc).isoformat(),
+                'closed_at': datetime.fromtimestamp(exit_deal.time, tz=timezone.utc).isoformat(),
+                'strategy': '',
+                'notes': f"MT5 deal #{pid}",
+            })
+        else:
+            # Открытая
+            trades.append({
+                'external_id': f"mt5-{pid}",
+                'symbol': symbol,
+                'side': side,
+                'status': 'open',
+                'entry_price': str(entry_price),
+                'exit_price': None,
+                'quantity': str(quantity),
+                'pnl': None,
+                'commission': str(commission),
+                'opened_at': datetime.fromtimestamp(entry_deal.time, tz=timezone.utc).isoformat(),
+                'closed_at': None,
+                'strategy': '',
+                'notes': f"MT5 open #{pid}",
+            })
+
+    return trades
 
 def send_to_api(trades):
     if not trades:
@@ -82,7 +135,7 @@ def send_to_api(trades):
 
 def run_once():
     connect_mt5()
-    trades = fetch_closed_trades(days_back=DAYS_BACK)
+    trades = fetch_trades(days_back=DAYS_BACK)   # ← было fetch_closed_trades
     print(f"📊 Найдено сделок: {len(trades)}")
     send_to_api(trades)
     mt5.shutdown()

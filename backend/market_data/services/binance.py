@@ -3,12 +3,12 @@ Binance API — крипто-котировки.
 Не блокирует облачные IP. Бесплатно, без API-ключа.
 """
 import logging
+from datetime import datetime, timezone
 from decimal import Decimal
 import requests
 
 logger = logging.getLogger(__name__)
 
-# Символы Binance
 SYMBOL_MAP = {
     'BTCUSDT': 'BTCUSDT', 'BTC': 'BTCUSDT',
     'ETHUSDT': 'ETHUSDT', 'ETH': 'ETHUSDT',
@@ -23,10 +23,6 @@ BASE_URL = 'https://api.binance.com/api/v3'
 
 
 def fetch_prices(symbols: list) -> dict:
-    """
-    Возвращает {symbol: {'price': Decimal, 'change_24h': Decimal}}.
-    Один запрос ко всем символам сразу.
-    """
     if not symbols:
         return {}
 
@@ -45,7 +41,6 @@ def fetch_prices(symbols: list) -> dict:
                 'price': Decimal(str(data['lastPrice'])),
                 'change_24h': Decimal(str(data['priceChangePercent'])).quantize(Decimal('0.0001')),
             }
-            logger.info(f'Binance {symbol}: {data["lastPrice"]}')
         except requests.RequestException as e:
             logger.error(f'Binance error for {symbol}: {e}')
             continue
@@ -53,28 +48,12 @@ def fetch_prices(symbols: list) -> dict:
     return result
 
 
-def fetch_candles(symbol: str, days: int = 7) -> list:
+def fetch_candles(symbol: str, interval: str = '1h', limit: int = 500) -> list:
     """
     Свечи через Binance Klines API.
-    days: 1 = 5m, 7 = 1h, 30 = 4h, 365 = 1d
+    interval: '1m', '5m', '15m', '30m', '1h', '4h', '1d'
     """
-    from datetime import datetime, timezone
-
     binance_sym = SYMBOL_MAP.get(symbol.upper(), symbol.upper())
-
-    # Интервал по дням
-    if days <= 1:
-        interval = '5m'
-        limit = 288
-    elif days <= 7:
-        interval = '1h'
-        limit = 168
-    elif days <= 30:
-        interval = '4h'
-        limit = 180
-    else:
-        interval = '1d'
-        limit = 365
 
     try:
         r = requests.get(
@@ -82,7 +61,7 @@ def fetch_candles(symbol: str, days: int = 7) -> list:
             params={
                 'symbol': binance_sym,
                 'interval': interval,
-                'limit': limit,
+                'limit': min(limit, 1000),
             },
             timeout=10,
         )
@@ -94,7 +73,6 @@ def fetch_candles(symbol: str, days: int = 7) -> list:
 
     candles = []
     for item in raw:
-        # Binance: [openTime, open, high, low, close, volume, closeTime, ...]
         ts = int(item[0])
         candles.append({
             'timestamp': datetime.fromtimestamp(ts / 1000, tz=timezone.utc),

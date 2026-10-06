@@ -1,7 +1,7 @@
 import os
 
 # URL Django API
-API_URL = os.getenv('TRADING_API_URL', 'http://127.0.0.1:8000')
+API_URL = os.getenv('TRADING_API_URL', 'https://trading-assistant-backend-hih7.onrender.com')
 
 # Токен из backend\.env (строка MT5_API_TOKEN=...)
 API_TOKEN = os.getenv('MT5_API_TOKEN', '8eb638ba524b806de86de7a27b4f7fb10fd23b23ca0ff6cc')

@@ -1,5 +1,4 @@
 import logging
-from decimal import Decimal
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -7,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from .models import PriceSnapshot, Candle
 from .serializers import PriceSnapshotSerializer, CandleSerializer
-from .services import binance as coingecko, mt5_prices
+from .services import price_service
 
 logger = logging.getLogger(__name__)
 
@@ -18,34 +17,21 @@ FOREX_SYMBOLS = ['XAUUSD', 'EURUSD', 'GBPUSD', 'USDJPY']
 
 
 def refresh_prices(symbols=None):
-    """Обновляет цены в БД. Используется scheduler'ом и API."""
+    """Обновляет цены в БД через price_service (Biquote → Binance → MT5)."""
     crypto = symbols or CRYPTO_SYMBOLS
     forex = FOREX_SYMBOLS
 
     updated = 0
 
-    # Крипта
-    crypto_data = coingecko.fetch_prices(crypto)
-    for symbol, data in crypto_data.items():
+    all_prices = price_service.fetch_prices(crypto + forex)
+    for symbol, data in all_prices.items():
+        source = 'biquote' if symbol in forex or symbol in crypto else 'unknown'
         PriceSnapshot.objects.update_or_create(
             symbol=symbol,
             defaults={
                 'price': data['price'],
                 'change_24h': data['change_24h'],
-                'source': 'coingecko',
-            },
-        )
-        updated += 1
-
-    # Форекс (если MT5 доступен локально)
-    forex_data = mt5_prices.fetch_prices(forex)
-    for symbol, data in forex_data.items():
-        PriceSnapshot.objects.update_or_create(
-            symbol=symbol,
-            defaults={
-                'price': data['price'],
-                'change_24h': data['change_24h'],
-                'source': 'mt5',
+                'source': source,
             },
         )
         updated += 1
@@ -58,11 +44,10 @@ def refresh_prices(symbols=None):
 def watchlist(request):
     """Список избранных символов с ценами."""
     symbols = CRYPTO_SYMBOLS + FOREX_SYMBOLS
-    # Дозаполняем недостающие
     existing = set(PriceSnapshot.objects.filter(symbol__in=symbols).values_list('symbol', flat=True))
     missing = [s for s in symbols if s not in existing]
     if missing:
-        refresh_prices(missing)
+        refresh_prices()
 
     qs = PriceSnapshot.objects.filter(symbol__in=symbols).order_by('symbol')
     return Response(PriceSnapshotSerializer(qs, many=True).data)
@@ -74,8 +59,7 @@ def price_detail(request, symbol):
     """Текущая цена символа."""
     snapshot = PriceSnapshot.objects.filter(symbol=symbol.upper()).first()
     if not snapshot:
-        # Пробуем обновить один раз
-        refresh_prices([symbol.upper()])
+        refresh_prices()
         snapshot = PriceSnapshot.objects.filter(symbol=symbol.upper()).first()
 
     if not snapshot:
@@ -91,24 +75,30 @@ def price_detail(request, symbol):
 def candles(request, symbol):
     """
     Свечи для графика.
-    ?days=1|7|30|365 — период (1=5мин, 7=часовые, 30=дневные)
+    ?interval=1h|4h|1d|5m|15m|30m
+    ?limit=500
     """
     symbol = symbol.upper()
-    days = int(request.query_params.get('days', 7))
+    interval = request.query_params.get('interval', '1h')
+    limit = int(request.query_params.get('limit', 500))
 
-    # Пробуем взять из БД
-    timeframe = '5m' if days == 1 else '1h' if days == 7 else '1d'
-    qs = Candle.objects.filter(symbol=symbol, timeframe=timeframe).order_by('timestamp')[:500]
+    # Проверяем допустимые интервалы
+    if interval not in ('1m', '5m', '15m', '30m', '1h', '4h', '1d'):
+        interval = '1h'
+
+    # Пробуем из БД
+    qs = Candle.objects.filter(
+        symbol=symbol, timeframe=interval
+    ).order_by('timestamp')[:limit]
 
     if qs.count() < 10:
-        # Забираем с CoinGecko
-        data = coingecko.fetch_candles(symbol, days=days)
+        # Забираем из price_service
+        data = price_service.fetch_candles(symbol, interval=interval, limit=limit)
         if data:
-            # Сохраняем в БД
             for c in data:
                 Candle.objects.update_or_create(
                     symbol=symbol,
-                    timeframe=timeframe,
+                    timeframe=interval,
                     timestamp=c['timestamp'],
                     defaults={
                         'open': c['open'],
@@ -118,7 +108,9 @@ def candles(request, symbol):
                         'volume': c['volume'],
                     },
                 )
-            qs = Candle.objects.filter(symbol=symbol, timeframe=timeframe).order_by('timestamp')[:500]
+            qs = Candle.objects.filter(
+                symbol=symbol, timeframe=interval
+            ).order_by('timestamp')[:limit]
 
     if not qs:
         return Response(
@@ -132,51 +124,6 @@ def candles(request, symbol):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def manual_refresh(request):
-    """Ручное обновление цен (только для авторизованных)."""
+    """Ручное обновление цен."""
     count = refresh_prices()
     return Response({'updated': count})
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def debug_coingecko(request):
-    """Диагностика: дотягивается ли backend до CoinGecko."""
-    import requests
-    import traceback
-    from django.conf import settings
-
-    result = {
-        'mt5_available': None,
-        'coingecko_test': None,
-        'coingecko_error': None,
-        'server_ip': None,
-    }
-
-    # Проверяем MT5
-    try:
-        from .services import mt5_prices
-        result['mt5_available'] = mt5_prices.MT5_AVAILABLE
-    except Exception as e:
-        result['mt5_available'] = f'error: {e}'
-
-    # Проверяем CoinGecko напрямую
-    try:
-        r = requests.get(
-            'https://api.coingecko.com/api/v3/simple/price',
-            params={'ids': 'bitcoin', 'vs_currencies': 'usd'},
-            timeout=15,
-        )
-        result['coingecko_test'] = {
-            'status_code': r.status_code,
-            'body': r.text[:500],
-        }
-    except Exception as e:
-        result['coingecko_error'] = f'{type(e).__name__}: {e}'
-
-    # Проверяем IP (для понимания, где мы)
-    try:
-        r = requests.get('https://api.ipify.org?format=json', timeout=5)
-        result['server_ip'] = r.json().get('ip')
-    except Exception:
-        pass
-
-    return Response(result)
