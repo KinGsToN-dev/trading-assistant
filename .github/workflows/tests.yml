@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - 'backend/**'
-      - '.github/workflows/tests.yml'
+      - '.github/workflows/backend-tests.yml'
   pull_request:
     branches: [main]
     paths:
@@ -31,6 +31,15 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+    env:
+      SECRET_KEY: test-secret-key-for-ci
+      DEBUG: 'False'
+      DATABASE_URL: postgresql://trading_user:test_password@localhost:5432/trading_assistant_test
+      ALLOWED_HOSTS: localhost,127.0.0.1,testserver
+      MT5_API_TOKEN: test-mt5-token
+      TELEGRAM_BOT_TOKEN: ''
+      TELEGRAM_CHAT_ID: ''
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -49,28 +58,8 @@ jobs:
 
       - name: Run migrations (sanity)
         working-directory: ./backend
-        env:
-          SECRET_KEY: test-secret-key-for-ci
-          DEBUG: 'False'
-          DB_NAME: trading_assistant_test
-          DB_USER: trading_user
-          DB_PASSWORD: test_password
-          DB_HOST: localhost
-          DB_PORT: 5432
-          MT5_API_TOKEN: test-mt5-token
-        run: |
-          python manage.py migrate --noinput
+        run: python manage.py migrate --noinput
 
       - name: Run pytest
         working-directory: ./backend
-        env:
-          SECRET_KEY: test-secret-key-for-ci
-          DEBUG: 'False'
-          DB_NAME: trading_assistant_test
-          DB_USER: trading_user
-          DB_PASSWORD: test_password
-          DB_HOST: localhost
-          DB_PORT: 5432
-          MT5_API_TOKEN: test-mt5-token
-        run: |
-          python -m pytest -v --tb=short
+        run: python -m pytest -v --tb=short
