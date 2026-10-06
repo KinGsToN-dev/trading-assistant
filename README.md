@@ -1,62 +1,127 @@
 # 📈 Trading Assistant — Full-Stack
 
 ![Backend Tests](https://github.com/KinGsToN-dev/trading-assistant/actions/workflows/tests.yml/badge.svg)
+![Python](https://img.shields.io/badge/Python-3.12-blue)
+![Django](https://img.shields.io/badge/Django-5.2-green)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
-AI-ассистент трейдера: журнал сделок, импорт из MetaTrader 5, котировки в реальном времени, AI-анализ графиков и уведомления.
+AI-ассистент трейдера: журнал сделок, импорт из MetaTrader 5, котировки в реальном времени, Telegram-уведомления.
 
-## ✨ Что уже реализовано
+**🌐 Демо:**
+- **Frontend (Flutter Web):** https://trading-assistant-almaz.web.app
+- **Backend API (Swagger):** https://trading-assistant-backend-hih7.onrender.com/api/docs/
 
-- 🔐 **JWT-аутентификация** — регистрация, логин, refresh, logout с blacklist
-- 👤 **Кастомная модель User** — email вместо username, поля для Telegram и timezone
-- 📝 **Журнал сделок (Trade)** — 20+ полей: symbol, side, entry/exit, quantity, pnl, strategy, tags, notes, emotion, screenshot, source, external_id
-- 💰 **Автоматический расчёт PnL** — long/short позиции, учёт комиссии
-- 🔍 **Фильтры и поиск** — по символу, статусу, стратегии, датам, заметкам
-- 📊 **Статистика** — Win Rate, total PnL, avg win/loss, best/worst trade
-- 🤖 **Импорт из MetaTrader 5** — через API-токен (`X-API-Key`), идемпотентность по `external_id`
-- 🖥️ **MT5-коллектор** — локальный скрипт читает историю сделок и пушит в Django
-- 🎨 **Django Admin** — с фильтрами, date-hierarchy, поиском
-- 📈 **Рыночные данные** — цены крипты (CoinGecko) и форекса (MetaTrader 5), кэш в PostgreSQL
-- 🕯️ **Свечи OHLC** — `/api/market/{symbol}/candles/?days=7` для графиков
-- ⏰ **Фоновый scheduler** — обновление цен каждые 60 секунд (без Redis)
-- 🔔 **Telegram-уведомления** — о новых сделках, TP/SL, утренний дайджест
-- 📊 **Лог уведомлений** — история всех отправленных сообщений
-- ⚙️ **Настройки per-user** — какие уведомления включены, час дайджеста
+**🔐 Тестовый аккаунт:**
+- Email: `admin@gmail.com`
+- Пароль: `admin12345`
+
+---
+
+## 📸 Скриншоты
+
+### Dashboard — статистика
+![Dashboard](docs/screenshots/02_dashboard.png)
+
+### Trades — журнал сделок
+![Trades](docs/screenshots/03_trades.png)
+
+### Market — котировки крипты, форекса и золота
+![Market](docs/screenshots/04_market.png)
+
+### График BTCUSDT (1H)
+![BTCUSDT](docs/screenshots/05_chart_btc.png)
+
+### Settings — Telegram и уведомления
+![Settings](docs/screenshots/06_settings.png)
+
+---
+
+## ✨ Возможности
+
+### Backend
+- 🔐 **JWT-аутентификация** — регистрация, логин, refresh, logout
+- 👤 **Кастомная модель User** — email вместо username
+- 📝 **Журнал сделок** — 20+ полей, автоматический расчёт PnL
+- 🔍 **Фильтры, поиск, сортировка** — по символу, статусу, датам, PnL
+- 📊 **Статистика** — Win Rate, total PnL, avg win/loss
+- 🤖 **Импорт из MetaTrader 5** — идемпотентность по external_id
+- 📈 **Рыночные данные** — Biquote (форекс, золото) + Binance (крипта)
+- 🕯️ **Свечи OHLC** — таймфреймы 1H / 4H / 1D
+- 🔔 **Telegram-уведомления** — о новых сделках, TP/SL, дайджест
+- 🎨 **Django Admin** — с фильтрами и поиском
+
+### Frontend (Flutter)
+- 📱 **6 экранов** — Login, Dashboard, Trades, Trade Detail, Market, Settings
+- 🌙 **Светлая и тёмная тема**
+- 📊 **Графики** — `fl_chart` с динамической осью Y
+- 🔐 **Auto-refresh JWT** — токен обновляется автоматически
+- 📈 **Рыночные данные** — цены + свечи в реальном времени
+- ⚙️ **Управление Telegram** — привязка, тестовое уведомление
+
+---
+
+## 🏗️ Архитектура
+┌─────────────────────────────────────────────────┐
+│ Flutter Web + Mobile │
+│ (Firebase Hosting) │
+└─────────────────┬───────────────────────────────┘
+│ HTTPS + JWT
+▼
+┌─────────────────────────────────────────────────┐
+│ Django REST API (Render) │
+│ ┌────────────────────────────────────────────┐ │
+│ │ /api/auth/ → JWT │ │
+│ │ /api/trades/ → CRUD + stats │ │
+│ │ /api/market/ → prices + candles │ │
+│ │ /api/notifications/→ Telegram │ │
+│ └────────────────────────────────────────────┘ │
+│ PostgreSQL 18 │
+└─────────────────▲───────────────────────────────┘
+│
+│ HTTP (Webhook)
+│
+┌─────────────────┴───────────────────────────────┐
+│ Локальный ПК (Windows) │
+│ MetaTrader 5 + Collector (каждые 5 мин) │
+└─────────────────────────────────────────────────┘
+
+Внешние API: Biquote (форекс/золото), Binance (крипта),
+Telegram Bot API, CoinGecko (резерв)
+
+text
+
+---
 
 ## 🏗️ Стек
 
 | Слой | Технологии |
 |---|---|
-| Backend | Python 3.12, Django 5.2, DRF, SimpleJWT |
-| БД | PostgreSQL 18 |
-| Auth | JWT (access + refresh), bcrypt |
-| MT5 | MetaTrader5 (Python), `history_deals_get` |
-| Рыночные данные | CoinGecko API (крипта), MT5 (форекс) |
-| Тесты | pytest, pytest-django, **37 тестов** |
-| API docs | drf-spectacular (Swagger UI) |
-| CI/CD | GitHub Actions |
+| **Frontend** | Flutter 3.47, Dart 3.13, fl_chart, go_router, http, shared_preferences |
+| **Backend** | Python 3.12, Django 5.2, DRF, SimpleJWT |
+| **БД** | PostgreSQL 18 |
+| **Auth** | JWT (access + refresh), bcrypt |
+| **MT5** | MetaTrader5 Python, history_deals_get |
+| **Рыночные данные** | Biquote (форекс/золото), Binance (крипта), CoinGecko (резерв) |
+| **Уведомления** | Telegram Bot API |
+| **Тесты** | pytest, pytest-django, flutter_test (**45+ тестов**) |
+| **CI/CD** | GitHub Actions, Auto-Deploy на Render, Firebase Hosting |
+| **API docs** | drf-spectacular (Swagger UI) |
+
+---
 
 ## 🚀 Быстрый старт
 
-### 1. Клонирование и установка
+### 1. Клонирование
 
-```powershell
-git clone <repo-url>
-cd trading_assistant
-
-# Виртуальное окружение
+```bash
+git clone https://github.com/KinGsToN-dev/trading-assistant.git
+cd trading-assistant/backend
+2. Установка
+bash
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-
-# Зависимости
-cd backend
+source .venv/bin/activate    # Windows: ..\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-2. Настройка PostgreSQL
-powershell
-# Создайте БД и пользователя (см. ROADMAP.md → Этап 1)
-psql -U postgres -c "CREATE DATABASE trading_assistant_db OWNER trading_user;"
-3. .env
-Создайте backend/.env:
-
+3. Настройка .env
 ini
 SECRET_KEY=change-me
 DEBUG=True
@@ -69,23 +134,42 @@ DB_PORT=5432
 JWT_ACCESS_MINUTES=30
 JWT_REFRESH_DAYS=7
 MT5_API_TOKEN=change-me
+TELEGRAM_BOT_TOKEN=change-me
+TELEGRAM_CHAT_ID=change-me
 4. Миграции и запуск
-powershell
+bash
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver
-Swagger UI: http://127.0.0.1:8000/api/docs/
+Swagger: http://127.0.0.1:8000/api/docs/
 
 Admin: http://127.0.0.1:8000/admin/
 
+5. Frontend (Flutter)
+bash
+git clone https://github.com/KinGsToN-dev/trading-app-flutter.git
+cd trading-app-flutter
+flutter pub get
+flutter run -d chrome
+⚠️ В lib/config/api_config.dart укажите URL backend.
+
 🧪 Тесты
-powershell
+bash
 cd backend
 python -m pytest -v
-37 тестов: 9 auth + 13 trades + 6 mt5-import + 9 market.
+45+ тестов:
 
+9 auth
 
+13 trades
 
+6 mt5-import
+
+9 market
+
+8 notifications
+
+CI: GitHub Actions автоматически прогоняет тесты на каждый push.
 
 📊 API
 Метод	Путь	Описание
@@ -96,44 +180,60 @@ GET	/api/auth/me/	Текущий пользователь
 POST	/api/auth/logout/	Logout (blacklist refresh)
 GET	/api/trades/	Список сделок (фильтры, поиск, сортировка)
 POST	/api/trades/	Создать сделку
-GET	/api/trades/{id}/	Детали
-PUT/PATCH	/api/trades/{id}/	Обновить
-DELETE	/api/trades/{id}/	Удалить
 GET	/api/trades/stats/	Статистика (Win Rate, PnL)
 POST	/api/trades/import/mt5/	Импорт из MT5 (X-API-Key)
-| GET | `/api/market/watchlist/` | Избранные символы с ценами |
-| GET | `/api/market/{symbol}/` | Текущая цена символа |
-| GET | `/api/market/{symbol}/candles/?days=7` | Свечи OHLC для графиков |
-| POST | `/api/market/refresh/` | Ручное обновление цен |
-| GET/PATCH | `/api/notifications/settings/` | Настройки уведомлений |
-| POST | `/api/notifications/telegram/link/` | Привязать Telegram |
-| POST | `/api/notifications/telegram/unlink/` | Отвязать Telegram |
-| POST | `/api/notifications/test/` | Тестовое уведомление |
-| GET | `/api/notifications/history/` | История уведомлений |
+GET	/api/market/watchlist/	Избранные символы с ценами
+GET	/api/market/{symbol}/candles/	Свечи OHLC
+POST	/api/notifications/telegram/link/	Привязать Telegram
+POST	/api/notifications/test/	Тестовое уведомление
+Полная документация: /api/docs/ (Swagger UI).
 
 📁 Структура
 text
-trading_assistant/
+trading-assistant/
 ├── backend/
 │   ├── config/              # settings, urls, wsgi
 │   ├── users/               # User, JWT auth
 │   ├── trades/              # Trade, CRUD, MT5-import
-│   │   ├── models.py
-│   │   ├── serializers.py
-│   │   ├── views.py
-│   │   ├── permissions.py
-│   │   └── admin.py
-│   ├── market_data/         # (этап 5) котировки
-│   ├── ai_agent/            # (этап 6) анализ скриншотов
-│   ├── notifications/       # (этап 7) Telegram, FCM
-│   ├── analytics/           # (этап 8) метрики
-│   ├── tests/
-│   │   ├── test_auth.py
-│   │   ├── test_trades.py
-│   │   └── test_mt5_import.py
-│   ├── tools/mt5_collector/ # локальный коллектор MT5
+│   ├── market_data/         # Prices, candles, Biquote, Binance
+│   ├── notifications/       # Telegram
+│   ├── ai_agent/            # (зарезервировано)
+│   ├── analytics/           # (зарезервировано)
+│   ├── tests/               # 45+ тестов
+│   ├── tools/mt5_collector/ # Локальный коллектор MT5
 │   ├── requirements.txt
 │   └── manage.py
-└── README.md, ROADMAP.md
+├── docs/screenshots/        # Скриншоты для README
+├── .github/workflows/       # CI/CD
+├── README.md
+└── ROADMAP.md
+Frontend: trading-app-flutter
+
+🎯 Roadmap
+✅ Этап 1-2: Django + JWT + PostgreSQL
+
+✅ Этап 3: Trade CRUD + статистика
+
+✅ Этап 4: MT5-импорт
+
+✅ Этап 5: Рыночные данные (Biquote + Binance)
+
+✅ Этап 7: Telegram-уведомления
+
+✅ Этап 8.1: Flutter-приложение (6 экранов)
+
+✅ Этап 8.2: Деплой (Render + Firebase)
+
+⏳ Этап 6: AI-агент (OpenAI Vision)
+
+⏳ Этап 8.3: Firebase Auth + FCM + Firestore
+
+⏳ Этап 8.4: Offline-режим + deep links
+
+Подробности: ROADMAP.md.
+
 📄 Лицензия
 MIT
+
+👤 Автор
+Кингстон (KinGsToN-dev)
