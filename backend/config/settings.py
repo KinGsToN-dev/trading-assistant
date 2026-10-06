@@ -68,12 +68,16 @@ TEMPLATES = [{
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # SSL нужен только на продакшене (Render). Локально PostgreSQL SSL не поддерживает.
-_db_url = os.environ.get('DATABASE_URL', '')
+# SSL нужен только на продакшене (Render). Локально PostgreSQL SSL не поддерживает.
+_db_url = config('DATABASE_URL', default='')
 _use_ssl = not DEBUG and _db_url and 'localhost' not in _db_url and '127.0.0.1' not in _db_url
 
 DATABASES = {
     'default': dj_database_url.config(
-        default='postgresql://trading_user:trading_pass_2669@localhost:5432/trading_assistant_db',
+        default=config(
+            'DATABASE_URL',
+            default='postgresql://trading_user:trading_pass_2669@localhost:5432/trading_assistant_db',
+        ),
         conn_max_age=600,
         ssl_require=_use_ssl,
     )
