@@ -135,3 +135,48 @@ def manual_refresh(request):
     """Ручное обновление цен (только для авторизованных)."""
     count = refresh_prices()
     return Response({'updated': count})
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def debug_coingecko(request):
+    """Диагностика: дотягивается ли backend до CoinGecko."""
+    import requests
+    import traceback
+    from django.conf import settings
+
+    result = {
+        'mt5_available': None,
+        'coingecko_test': None,
+        'coingecko_error': None,
+        'server_ip': None,
+    }
+
+    # Проверяем MT5
+    try:
+        from .services import mt5_prices
+        result['mt5_available'] = mt5_prices.MT5_AVAILABLE
+    except Exception as e:
+        result['mt5_available'] = f'error: {e}'
+
+    # Проверяем CoinGecko напрямую
+    try:
+        r = requests.get(
+            'https://api.coingecko.com/api/v3/simple/price',
+            params={'ids': 'bitcoin', 'vs_currencies': 'usd'},
+            timeout=15,
+        )
+        result['coingecko_test'] = {
+            'status_code': r.status_code,
+            'body': r.text[:500],
+        }
+    except Exception as e:
+        result['coingecko_error'] = f'{type(e).__name__}: {e}'
+
+    # Проверяем IP (для понимания, где мы)
+    try:
+        r = requests.get('https://api.ipify.org?format=json', timeout=5)
+        result['server_ip'] = r.json().get('ip')
+    except Exception:
+        pass
+
+    return Response(result)
