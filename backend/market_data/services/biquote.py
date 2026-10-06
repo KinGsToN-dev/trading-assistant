@@ -10,18 +10,21 @@ logger = logging.getLogger(__name__)
 
 # РњР°РїРїРёРЅРі СЃРёРјРІРѕР»РѕРІ (Biquote РёСЃРїРѕР»СЊР·СѓРµС‚ С‚Рµ Р¶Рµ С‚РёРєРµСЂС‹, РЅРѕ РїСЂРѕРІРµСЂРёРј)
 SYMBOL_MAP = {
+    # Форекс и золото — Biquote использует те же тикеры
     'XAUUSD': 'XAUUSD',
     'EURUSD': 'EURUSD',
     'GBPUSD': 'GBPUSD',
     'USDJPY': 'USDJPY',
-    'BTCUSDT': 'BTCUSD',   # Biquote РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ BTCUSD, Р° РЅРµ BTCUSDT
-    'ETHUSDT': 'ETHUSD',
-    'SOLUSDT': 'SOLUSD',
-    'BNBUSDT': 'BNBUSD',
-    'XRPUSDT': 'XRPUSD',
-    'DOGEUSDT': 'DOGEUSD',
+    # Крипта — Biquote использует USDT (crypto-биржи), 
+    # это точнее и меньше спред, чем USD (MetaTrader 5)
+    'BTCUSDT': 'BTCUSDT',
+    'ETHUSDT': 'ETHUSDT',
+    'SOLUSDT': 'SOLUSDT',
+    'BNBUSDT': 'BNBUSDT',
+    'XRPUSDT': 'XRPUSDT',
+    'DOGEUSDT': 'DOGEUSDT',
+    'ADAUSDT': 'ADAUSDT',
 }
-
 
 def _to_biquote_symbol(symbol: str) -> str:
     return SYMBOL_MAP.get(symbol.upper(), symbol.upper())
